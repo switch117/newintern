@@ -1,3 +1,3 @@
 # READ ME
 
-# Laravelを追加します
+Laravelを追加します
