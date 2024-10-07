@@ -15,6 +15,7 @@ class PlayersController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    //プレイヤーの情報を表す関数
     public function index()
     {
         return new Response(
@@ -29,6 +30,7 @@ class PlayersController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
+    //指定されたIDのプレイヤーの情報を表す関数
     public function show($id)
     {
         
@@ -37,10 +39,6 @@ class PlayersController extends Controller
         (
             $player->playerShow($id)
         );
-    
-        // プレイヤーが見つからなかった場合、404エラーレスポンスを返す
-        if (!$player) {
-        return new Response('Player not found', 404);}
     }
 
     /**
@@ -61,6 +59,7 @@ class PlayersController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
+    //指定されたIDのプレイヤーの情報を更新する関数
     public function update(Request $request, $id)
     {
         $player = new Player();
@@ -68,9 +67,12 @@ class PlayersController extends Controller
         // playerUpdate関数を使って指定したIDのプレイヤー情報を更新
         $affectedRows = $player->playerUpdate($id, $request->hp, $request->mp, $request->money);
 
-        if ($affectedRows > 0) {
+        if ($affectedRows > 0) 
+        {
         return response()->json(['message' => 'Player updated successfully'], 200);
-        } else {
+        } 
+        else
+        {
         return response()->json(['error' => 'Player not found or no changes made'], 404);
         }
 
@@ -82,6 +84,8 @@ class PlayersController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
+
+    //指定されたIDのプレイヤー削除
     public function destroy($id)
     {
         //
@@ -89,12 +93,13 @@ class PlayersController extends Controller
         $player = Player::find($id);
     
         // プレイヤーが見つからなかった場合、404エラーレスポンスを返す
-        if (!$player) {
+        if (!$player) 
+        {
         return response()->json(['message' => 'Player not found'], 404);
         }
 
         // プレイヤーを削除
-        // $player->delete();
+        $player->delete();
 
         // 削除成功のレスポンスを返す
         return response()->json(['message' => 'Player deleted successfully'], 200);
@@ -105,6 +110,7 @@ class PlayersController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    //プレイヤーを作る関数
     public function create(Request $request)
     {
 
@@ -116,7 +122,8 @@ class PlayersController extends Controller
         'money' => 'required|integer|min:0',
         ]);
 
-        try {
+        try 
+        {
             // 新しいPlayerインスタンスを作成
             $player = new Player();
     
@@ -125,10 +132,11 @@ class PlayersController extends Controller
     
             // 成功時に新しいプレイヤーのIDを返す
             return response()->json(['id' => $newId], 201);
-        } catch (QueryException $e) {
+        }
+        catch (QueryException $e) 
+        {
             // エラーが発生した場合にエラーメッセージを返す
             return response()->json(['error' => 'Failed to create player', 'message' => $e->getMessage()], 500);
-
         }
     }
 

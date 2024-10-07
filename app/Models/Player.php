@@ -16,7 +16,8 @@ class Player extends Model
      * プレイヤーを1件取得
      * @return １件のプレイヤー情報
      */
-    public function playerShow($id) {
+    public function playerShow($id) 
+    {
         return (Player::query()->where('id', $id)->first());
     }
 
@@ -28,7 +29,8 @@ class Player extends Model
      */
     public function playerCreate($name, $hp, $mp, $money) 
     {  
-        return(Player::query()->insertGetId([
+        return(Player::query()->insertGetId
+        ([
             'name' => $name,
             'hp' => $hp,
             'mp' => $mp,
@@ -36,6 +38,12 @@ class Player extends Model
         ]));
     }
 
+    
+    /**
+     * 指定されたIDのプレイヤーを削除する
+     * 
+     * @return 削除できたかどうかメッセージを返す
+     */
     public function playerDestroy($id)
     {
         // 指定されたIDのプレイヤーを削除
@@ -44,11 +52,18 @@ class Player extends Model
         ->delete(); // 該当レコードを削除
     }
 
+
+    /**
+     * IDからプレイヤーの情報を取得し、hp,mp,moneyを更新する関数
+     * 
+     * @param int id,hp,mp,money
+     * @return 更新できたかメッセージを表す
+     */
+
     public function playerUpdate($id, $hp, $mp, $money)
     {
-    return Player::query()
-        ->where('id', $id) // 指定されたIDのプレイヤーを検索
-        ->update([
+        return Player::query()->where('id', $id)->update // 指定されたIDのプレイヤーを検索
+        ([
             'hp' => $hp,
             'mp' => $mp,
             'money' => $money
