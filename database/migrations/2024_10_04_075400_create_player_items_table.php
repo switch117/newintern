@@ -16,8 +16,8 @@ class CreatePlayerItemsTable extends Migration
         Schema::create('player_items', function (Blueprint $table) {
             $table->integer('player_id')->unsigned();
             $table->integer('item_id')->unsigned();
-            $table->primary(['player_id', 'item_id']);
             $table->integer('count');
+            $table->primary(['player_id', 'item_id']);
         });
     }
 
