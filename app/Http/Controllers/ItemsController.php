@@ -33,17 +33,17 @@ class ItemsController extends Controller
        $itemModel = new Item(); // モデルをインスタンス化
        $item = $itemModel->getItemById($id);
 
+       $data = $request->validate([
+        'name' => 'required|string|max:255',
+        'value' => 'required|integer|min:1',
+        'price' => 'required|integer|min:0',
+        'type' => 'required|integer',
+        'percent' => 'required|integer|min:0|max:100',
+        ]);
+
        if (!$item) {
            return response()->json(['error' => 'Item not found'], 404);
        }
-
-       $data = $request->validate([
-           'name' => 'required|string|max:255',
-           'value' => 'required|integer|min:1',
-           'price' => 'required|integer|min:0',
-           'type' => 'required|integer',
-           'percent' => 'required|integer|min:0|max:100',
-       ]);
 
        $itemModel->updateItem($id, $data);
 

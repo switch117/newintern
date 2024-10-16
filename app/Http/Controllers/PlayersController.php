@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-
+use Exception; 
 
 
 class PlayersController extends Controller
@@ -124,6 +124,7 @@ class PlayersController extends Controller
     {
         
         $playeritem = new Playeritems();
+        $count=0;
 
         // 既存のレコードがあるか確認
         $itemExists = $playeritem->playerItemExists($id, $request->item_id);
@@ -133,29 +134,26 @@ class PlayersController extends Controller
             // 既にアイテムが存在する場合はupdate
             $playeritem->player_itemsupdate($id, $request->item_id, $request->count);
 
-            // 更新後の新しいカウントを取得
-            $newCount = DB::table('player_items')
+            $count = DB::table('player_items')
             ->where('player_id', $id)
             ->where('item_id', $request->item_id)
             ->value('count'); // 更新後の新しいカウントを取得
-
-            // レスポンスを返す（更新された場合）
-            return response()->json([
-            'itemId' => $request->item_id,
-            'count' => $newCount
-            ]);
         } 
         else 
         {
             // 存在しない場合はinsert
             $playeritem->player_itemsinsert($id, $request->item_id, $request->count);
 
-            // レスポンスを返す
-            return response()->json([
-            'itemId' => $request->item_id,
-            'count' => $request->count
-            ]);
+            // 新しく挿入されたカウントを設定
+            $count = $request->count;
         }
+
+         // 統一されたレスポンスを返す
+         return response()->json([
+            'itemId' => $request->item_id,
+            'count'  => $count,
+        ]); 
+
     }
 
     
@@ -290,13 +288,18 @@ class PlayersController extends Controller
         $playeritem=new Playeritems();
         $count=$request->input('count',1);
 
-        //プレイヤーの所持金を確認
-        $playerMoney=$player->getPlayerMoney($id);
-        $cost=$count*10;
+        //トランザクション開始
+        DB::beginTransaction();
 
-        //count×10の値が所持金より多ければエラーを返す
-        if($playerMoney<$cost){
-            return response()->json(['error'=>'お金が足りません'],400); 
+        try{
+            //プレイヤーの所持金を確認
+            $playerMoney=$player->getPlayerMoney($id);
+            $cost=$count*10;
+
+            //count×10の値が所持金より多ければエラーを返す
+            if($playerMoney<$cost){
+            // return response()->json(['error'=>'お金が足りません'],400); 
+            throw new Exception('お金が足りません'); // エラーを投げる
         }
 
         //所持金を減らす
@@ -347,14 +350,28 @@ class PlayersController extends Controller
         $updateMoney=$player->getPlayerMoney($id);//ガチャ後の所持金を得る。
         $updateItems=$playeritem->getPlayerItem2($id);//プレイヤーアイテムテーブルからアイテムを取得する。
 
+        //全て成功したのでコミット
+        DB::commit();
+
+
         return response()->json([
             'results'=>$result,
-            'はずれ'=>$missCount,
+            'missCount'=>$missCount,
             'player'=>[
                 'money'=>$updateMoney,
                 'items'=>$updateItems
             ]
-            ]);
+        ]);
+    }
+    catch(Exception $e)
+    {
+        //エラーが発生したらロールバック
+        DB::rollBack();
+
+        //エラーメッセージを返す
+        return response()->json(['error'=>$e->getMessage()],400);
+    }
+
     }
 
 }

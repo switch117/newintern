@@ -12,7 +12,8 @@ class Playeritems extends Model
     use HasFactory;
 
     public function player_itemsinsert($player_id,$item_id,$count)
-    {
+    {   
+        
         // データを挿入
         $inserted = DB::table('player_items')->insert([
         'player_id' => $player_id,
