@@ -156,16 +156,21 @@ class PlayersController extends Controller
 
     }
 
+    //定数定義
+    const MAX_HP=200;
+    const MAX_MP=200;
+    const DEFAULT_ITEM_USE_COUNT=1;
     
     //アイテムを使用する関数
     public function useItem(Request $request, $id)
     {
+
         $playeritem = new Playeritems();
         $player = new Player();
 
         // アイテムIDとカウントをリクエストから取得
         $item_id = $request->item_id;
-        $count = $request->count ?? 1;  // デフォルトで1個使用
+        $count = $request->count ?? self::DEFAULT_ITEM_USE_COUNT;  // デフォルトで1個使用
 
         // プレイヤーのアイテムを取得
         $item = $playeritem->getPlayerItem($id, $item_id);
@@ -189,7 +194,8 @@ class PlayersController extends Controller
         // HP回復の場合の処理 
         if($itemDetails->type==1)
         {
-            $available_hp_recovery = 200 - $currentPlayer->hp;  // 回復可能なHPの量
+            //$available_hp_recovery = 200 - $currentPlayer->hp;  // 回復可能なHPの量
+            $available_hp_recovery = self::MAX_HP - $currentPlayer->hp;  // 回復可能なHPの量
 
             // プレイヤーのHPがすでに最大値の場合
             if ($available_hp_recovery <= 0) 
@@ -203,8 +209,8 @@ class PlayersController extends Controller
 
             // 実際に回復するHP量を計算
             $hp_amount = $itemDetails->value * $used_count;
-            $new_hp = min($currentPlayer->hp + $hp_amount, 200);  // HPは最大値200まで
-
+            // $new_hp = min($currentPlayer->hp + $hp_amount, 200);  // HPは最大値200まで
+            $new_hp = min($currentPlayer->hp + $hp_amount, self::MAX_HP);  // HPは最大値200まで
             // HPを回復
             $player->healPlayer($id, $new_hp - $currentPlayer->hp, 0);  // 実際に回復するHP量を差分で
 
@@ -217,23 +223,12 @@ class PlayersController extends Controller
             //使用されなかったアイテムの数
             $unused_count=$count-$used_count;
 
-            return response()->json([
-            'itemId' => $item_id,
-            'usedCount' => $used_count,
-            'remainingCount' => $item->count - $used_count,
-            'player' => [
-                'id' => $updatedPlayer->id,
-                'hp' => $updatedPlayer->hp,
-                'mp' => $updatedPlayer->mp,
-            ],
-            'message' => $unused_count > 0 ? "$unused_count 個のアイテムが使用されませんでした" : 'アイテムが正常に使用されました'
-            ]);
         }
 
         // MP回復の場合の処理 (item_id = 2)
         else if ($itemDetails->type==2) 
         {
-            $available_mp_recovery = 200 - $currentPlayer->mp;  // 回復可能なMPの量
+            $available_mp_recovery = self::MAX_MP - $currentPlayer->mp;  // 回復可能なMPの量
 
             // プレイヤーのMPがすでに最大値の場合
             if ($available_mp_recovery <= 0)
@@ -247,7 +242,7 @@ class PlayersController extends Controller
 
             // 実際に回復するMP量を計算
             $mp_amount = $itemDetails->value * $used_count;
-            $new_mp = min($currentPlayer->mp + $mp_amount, 200);  // MPは最大値200まで
+            $new_mp = min($currentPlayer->mp + $mp_amount, self::MAX_MP);  // MPは最大値200まで
 
             // MPを回復
             $player->healPlayer($id, 0, $new_mp - $currentPlayer->mp);  // 実際に回復するMP量を差分で
@@ -261,7 +256,17 @@ class PlayersController extends Controller
             //使用されなかったアイテムの数
             $unused_count=$count-$used_count;
 
-            return response()->json([
+        }
+        else
+        {
+            throw new Exception('無効なアイテムIDです');
+        }
+
+        // 使用後のプレイヤーのステータスを取得
+        $updatedPlayer = $player->getPlayer($id);
+
+         // 正常にアイテムを使用した場合のレスポンス
+         return response()->json([
             'itemId' => $item_id,
             'usedCount' => $used_count,
             'remainingCount' => $item->count - $used_count,
@@ -269,13 +274,9 @@ class PlayersController extends Controller
                 'id' => $updatedPlayer->id,
                 'hp' => $updatedPlayer->hp,
                 'mp' => $updatedPlayer->mp,
-            ],
-            // 'message' => $used_count < $count ? '一部のアイテムが使用されませんでした' : 'アイテムが正常に使用されました'
-            'message' => $unused_count > 0 ? "$unused_count 個のアイテムが使用されませんでした" : 'アイテムが正常に使用されました'
-            ]);
-        }
+            ]
+        ]);
 
-        return response()->json(['error' => '無効なアイテムIDです'], 400);
     }
 
 
@@ -291,16 +292,17 @@ class PlayersController extends Controller
         //トランザクション開始
         DB::beginTransaction();
 
-        try{
+        try
+        {
             //プレイヤーの所持金を確認
             $playerMoney=$player->getPlayerMoney($id);
             $cost=$count*10;
 
             //count×10の値が所持金より多ければエラーを返す
-            if($playerMoney<$cost){
-            // return response()->json(['error'=>'お金が足りません'],400); 
-            throw new Exception('お金が足りません'); // エラーを投げる
-        }
+            if($playerMoney<$cost)
+            {
+                throw new Exception('お金が足りません'); // エラーを投げる
+            }
 
         //所持金を減らす
         $player->updateMoney($id,$cost);
