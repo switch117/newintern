@@ -13,7 +13,7 @@ class Playeritems extends Model
 
     public function player_itemsinsert($player_id,$item_id,$count)
     {   
-        
+
         // データを挿入
         $inserted = DB::table('player_items')->insert([
         'player_id' => $player_id,
@@ -50,7 +50,7 @@ class Playeritems extends Model
     }
 
     //プレイヤーのアイテムを取得
-    public function getPlayerItem2($player_id)
+    public function getPlayerItembyid($player_id)
     {
         return DB::table('player_items')
         ->where('player_id',$player_id)

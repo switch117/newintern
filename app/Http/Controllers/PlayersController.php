@@ -160,6 +160,8 @@ class PlayersController extends Controller
     const MAX_HP=200;
     const MAX_MP=200;
     const DEFAULT_ITEM_USE_COUNT=1;
+    const ITEM_TYPE_HP=1;//HP回復アイテムのタイプ
+    const ITEM_TYPE_MP=2;//MP回復アイテムのタイプ
     
     //アイテムを使用する関数
     public function useItem(Request $request, $id)
@@ -177,7 +179,7 @@ class PlayersController extends Controller
 
         // アイテムが存在しないか、所持数がゼロの場合
         if (!$item || $item->count < $count) 
-        {
+        {   
             return response()->json(['error' => 'アイテムが不足しています'], 400);
         }
 
@@ -192,9 +194,9 @@ class PlayersController extends Controller
         }
 
         // HP回復の場合の処理 
-        if($itemDetails->type==1)
+        //if($itemDetails->type==1)
+        if ($itemDetails->type == self::ITEM_TYPE_HP)
         {
-            //$available_hp_recovery = 200 - $currentPlayer->hp;  // 回復可能なHPの量
             $available_hp_recovery = self::MAX_HP - $currentPlayer->hp;  // 回復可能なHPの量
 
             // プレイヤーのHPがすでに最大値の場合
@@ -209,7 +211,6 @@ class PlayersController extends Controller
 
             // 実際に回復するHP量を計算
             $hp_amount = $itemDetails->value * $used_count;
-            // $new_hp = min($currentPlayer->hp + $hp_amount, 200);  // HPは最大値200まで
             $new_hp = min($currentPlayer->hp + $hp_amount, self::MAX_HP);  // HPは最大値200まで
             // HPを回復
             $player->healPlayer($id, $new_hp - $currentPlayer->hp, 0);  // 実際に回復するHP量を差分で
@@ -226,7 +227,8 @@ class PlayersController extends Controller
         }
 
         // MP回復の場合の処理 (item_id = 2)
-        else if ($itemDetails->type==2) 
+        //else if ($itemDetails->type==2) 
+        else if ($itemDetails->type == self::ITEM_TYPE_MP)
         {
             $available_mp_recovery = self::MAX_MP - $currentPlayer->mp;  // 回復可能なMPの量
 
@@ -304,75 +306,75 @@ class PlayersController extends Controller
                 throw new Exception('お金が足りません'); // エラーを投げる
             }
 
-        //所持金を減らす
-        $player->updateMoney($id,$cost);
+            //所持金を減らす
+            $player->updateMoney($id,$cost);
 
-        //ガチャを引いてアイテムをランダムに取得
-        $result=[];
-        $missCount=0;
-        for($i=0;$i<$count;$i++)
-        {
-            $randomItem=$itemModel->getRandomItem();
-            if($randomItem)
+            //ガチャを引いてアイテムをランダムに取得
+            $result=[];
+            $missCount=0;
+            for($i=0;$i<$count;$i++)
             {
+                $randomItem=$itemModel->getRandomItem();
+                if($randomItem)
+                {
                 
                  // ガチャで取得したアイテムのIDを使う
                 $existingItem = $playeritem->playerItemExists($id, $randomItem->id);
                 
-                if($existingItem)
-                {
-                    $playeritem->player_itemsUpdate($id,$randomItem->id,1);
+                    if($existingItem)
+                    {
+                        $playeritem->player_itemsUpdate($id,$randomItem->id,1);
+                    }
+                    else
+                    {
+                        // 既存のアイテムがなければ新規に挿入
+                        $playeritem->player_itemsinsert($id, $randomItem->id, 1);
+                    }
+
+                    //獲得したアイテムを結果に追加
+                    $result[]=[
+                    'itemId'=>$randomItem->id,
+                    'count'=>1
+                    ];
                 }
                 else
                 {
-                    // 既存のアイテムがなければ新規に挿入
-                    $playeritem->player_itemsinsert($id, $randomItem->id, 1);
+                    // ハズレの場合の処理
+                    // 何も獲得しなかった場合のロジック
+                    $results[] = [
+                    'itemId' => null, // ハズレアイテムとしての表示
+                    'count' => 0
+                    ];
+                    $missCount++;//はずれのカウントを増やす
                 }
-
-                //獲得したアイテムを結果に追加
-                $result[]=[
-                    'itemId'=>$randomItem->id,
-                    'count'=>1
-                ];
-            }
-            else
-            {
-                // ハズレの場合の処理
-                // 何も獲得しなかった場合のロジック
-                $results[] = [
-                'itemId' => null, // ハズレアイテムとしての表示
-                'count' => 0
-                ];
-                $missCount++;//はずれのカウントを増やす
-            }
             
-        }
+            }
 
 
-        $updateMoney=$player->getPlayerMoney($id);//ガチャ後の所持金を得る。
-        $updateItems=$playeritem->getPlayerItem2($id);//プレイヤーアイテムテーブルからアイテムを取得する。
+            $updateMoney=$player->getPlayerMoney($id);//ガチャ後の所持金を得る。
+            $updateItems=$playeritem->getPlayerItembyid($id);//プレイヤーアイテムテーブルからアイテムを取得する。
 
-        //全て成功したのでコミット
-        DB::commit();
+            //全て成功したのでコミット
+            DB::commit();
 
-
-        return response()->json([
+            return response()->json([
             'results'=>$result,
             'missCount'=>$missCount,
             'player'=>[
                 'money'=>$updateMoney,
                 'items'=>$updateItems
             ]
-        ]);
-    }
-    catch(Exception $e)
-    {
-        //エラーが発生したらロールバック
-        DB::rollBack();
+            ]);
+        }
 
-        //エラーメッセージを返す
-        return response()->json(['error'=>$e->getMessage()],400);
-    }
+        catch(Exception $e)
+        {
+            //エラーが発生したらロールバック
+            DB::rollBack();
+
+            //エラーメッセージを返す
+            return response()->json(['error'=>$e->getMessage()],400);
+        }
 
     }
 
